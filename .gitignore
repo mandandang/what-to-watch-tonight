@@ -1,0 +1,9 @@
+# Dataset IMDb scaricati automaticamente da scripts/build_dashboard.py (grossi, rigenerabili)
+data/.imdb_cache/
+
+# File temporanei Python
+__pycache__/
+*.pyc
+
+# Log di server locali di prova
+*.log

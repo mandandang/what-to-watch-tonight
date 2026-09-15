@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cosa guardo stasera?</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #14121a;
+    --bg-elevated: #1d1a24;
+    --card: #24202e;
+    --card-border: #322c3d;
+    --text: #f1eef6;
+    --text-dim: #a79fb8;
+    --accent: #e8b34a;
+    --accent-soft: rgba(232, 179, 74, 0.15);
+    --good: #6bc98f;
+    --mid: #e8b34a;
+    --bad: #e2685f;
+    --chip-bg: #2c2738;
+    --chip-active-bg: var(--accent);
+    --chip-active-text: #1a1610;
+    --shadow: 0 8px 24px rgba(0,0,0,0.35);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    padding: 0 16px 48px;
+  }
+
+  header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: linear-gradient(180deg, var(--bg) 82%, transparent);
+    padding: 20px 0 12px;
+  }
+
+  h1 {
+    font-size: clamp(1.4rem, 4vw, 2rem);
+    margin: 0 0 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .search-wrap {
+    position: relative;
+    margin-bottom: 14px;
+  }
+
+  #search {
+    width: 100%;
+    padding: 14px 16px 14px 44px;
+    border-radius: 14px;
+    border: 1px solid var(--card-border);
+    background: var(--bg-elevated);
+    color: var(--text);
+    font-size: 1rem;
+    outline: none;
+  }
+  #search:focus { border-color: var(--accent); }
+
+  .search-icon {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    opacity: 0.6;
+    pointer-events: none;
+  }
+
+  .filters {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .filter-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    scrollbar-width: thin;
+  }
+  .filter-row::-webkit-scrollbar { height: 6px; }
+  .filter-row::-webkit-scrollbar-thumb { background: var(--card-border); border-radius: 4px; }
+
+  .filter-label {
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-dim);
+    white-space: nowrap;
+    flex: none;
+    padding-right: 2px;
+  }
+
+  .chip {
+    flex: none;
+    padding: 7px 14px;
+    border-radius: 999px;
+    background: var(--chip-bg);
+    color: var(--text);
+    border: 1px solid transparent;
+    font-size: 0.85rem;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.15s, color 0.15s;
+  }
+  .chip:hover { border-color: var(--card-border); }
+  .chip.active {
+    background: var(--chip-active-bg);
+    color: var(--chip-active-text);
+    font-weight: 600;
+  }
+
+  .toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 12px;
+  }
+
+  .result-count { color: var(--text-dim); font-size: 0.9rem; }
+
+  select#sort {
+    background: var(--chip-bg);
+    color: var(--text);
+    border: 1px solid var(--card-border);
+    border-radius: 10px;
+    padding: 7px 10px;
+    font-size: 0.85rem;
+  }
+
+  .toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.85rem;
+    color: var(--text-dim);
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: 14px;
+    margin-top: 18px;
+  }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 16px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    box-shadow: var(--shadow);
+  }
+
+  .card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .title-block { min-width: 0; }
+
+  .card h3 {
+    margin: 0;
+    font-size: 1.02rem;
+    line-height: 1.3;
+    word-break: break-word;
+  }
+  .year { color: var(--text-dim); font-size: 0.8rem; }
+
+  .rating {
+    flex: none;
+    text-align: center;
+    min-width: 46px;
+    padding: 5px 8px;
+    border-radius: 10px;
+    font-weight: 700;
+    font-size: 1rem;
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+  .rating.good { color: var(--good); background: rgba(107,201,143,0.15); }
+  .rating.mid { color: var(--mid); background: rgba(232,179,74,0.15); }
+  .rating.bad { color: var(--bad); background: rgba(226,104,95,0.15); }
+  .rating.na { color: var(--text-dim); background: rgba(255,255,255,0.05); font-weight: 500; font-size: 0.75rem; }
+  .votes { font-size: 0.68rem; color: var(--text-dim); margin-top: 2px; font-weight: 400; }
+
+  .rating-block {
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+  }
+
+  .rt-badge {
+    font-size: 0.72rem;
+    color: var(--text-dim);
+    background: rgba(255,255,255,0.05);
+    padding: 2px 7px;
+    border-radius: 8px;
+  }
+
+  .genre-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+  .genre-tag {
+    font-size: 0.72rem;
+    background: var(--chip-bg);
+    color: var(--text-dim);
+    padding: 3px 9px;
+    border-radius: 999px;
+  }
+
+  .mood-badge {
+    align-self: flex-start;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 999px;
+    color: #1a1610;
+  }
+  .mood-Adrenalina { background: #e2685f; color: #2a0d0a; }
+  .mood-Comfort-movie { background: #6bc98f; color: #0d2416; }
+  .mood-Mente-accesa { background: #7aa7e8; color: #0d1c33; }
+  .mood-Da-vedere-in-due { background: #e884c4; color: #300f27; }
+  .mood-Domenica-impegnativa { background: #a08ee0; color: #1e1533; }
+  .mood-Venerdi-leggero { background: #e8b34a; color: #2a1c05; }
+
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-dim);
+  }
+
+  .load-more-wrap {
+    display: flex;
+    justify-content: center;
+    margin-top: 26px;
+  }
+
+  #loadMore {
+    background: var(--chip-bg);
+    color: var(--text);
+    border: 1px solid var(--card-border);
+    padding: 12px 24px;
+    border-radius: 999px;
+    font-size: 0.9rem;
+    cursor: pointer;
+  }
+  #loadMore:hover { border-color: var(--accent); }
+
+  footer {
+    text-align: center;
+    color: var(--text-dim);
+    font-size: 0.75rem;
+    margin-top: 36px;
+  }
+
+  @media (max-width: 480px) {
+    .grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
+    .card { padding: 12px; border-radius: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🎬 Cosa guardo stasera?</h1>
+  <div class="search-wrap">
+    <span class="search-icon">🔎</span>
+    <input id="search" type="text" placeholder="Cerca un titolo...">
+  </div>
+  <div class="filters">
+    <div class="filter-row" id="moodRow">
+      <span class="filter-label">Mood</span>
+    </div>
+    <div class="filter-row" id="genreRow">
+      <span class="filter-label">Genere</span>
+    </div>
+  </div>
+  <div class="toolbar">
+    <span class="result-count" id="resultCount"></span>
+    <div style="display:flex; align-items:center; gap:14px;">
+      <label class="toggle"><input type="checkbox" id="onlyRated"> Solo con voto</label>
+      <select id="sort">
+        <option value="rating_desc">Voto (dal piu alto)</option>
+        <option value="year_desc">Anno (dal piu recente)</option>
+        <option value="title_asc">Titolo (A-Z)</option>
+      </select>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="grid" id="grid"></div>
+  <div class="empty-state" id="emptyState" style="display:none;">Nessun film corrisponde ai filtri scelti. Prova ad allargarli.</div>
+  <div class="load-more-wrap" id="loadMoreWrap" style="display:none;">
+    <button id="loadMore"></button>
+  </div>
+</main>
+
+<footer id="footerNote"></footer>
+
+<script>
+const MOVIES = /*__MOVIES_JSON__*/;
+
+const MOOD_ORDER = ["Venerdi leggero", "Comfort movie", "Adrenalina", "Mente accesa", "Da vedere in due", "Domenica impegnativa"];
+const MOOD_LABELS = {
+  "Venerdi leggero": "Venerdì leggero",
+  "Comfort movie": "Comfort movie",
+  "Adrenalina": "Adrenalina",
+  "Mente accesa": "Mente accesa",
+  "Da vedere in due": "Da vedere in due",
+  "Domenica impegnativa": "Domenica impegnativa",
+};
+
+const state = {
+  search: "",
+  moods: new Set(),
+  genres: new Set(),
+  onlyRated: false,
+  sort: "rating_desc",
+  visibleCount: 60,
+};
+
+const PAGE_SIZE = 60;
+
+function moodClass(mood) {
+  return "mood-" + mood.replace(/ /g, "-");
+}
+
+function ratingClass(r) {
+  if (r === null) return "na";
+  if (r >= 7.5) return "good";
+  if (r >= 5.5) return "mid";
+  return "bad";
+}
+
+function buildGenreList() {
+  const set = new Set();
+  for (const m of MOVIES) for (const g of m.g) set.add(g);
+  return Array.from(set).sort();
+}
+
+function renderChips() {
+  const moodRow = document.getElementById("moodRow");
+  for (const mood of MOOD_ORDER) {
+    const chip = document.createElement("button");
+    chip.className = "chip";
+    chip.textContent = MOOD_LABELS[mood];
+    chip.dataset.mood = mood;
+    chip.addEventListener("click", () => {
+      if (state.moods.has(mood)) state.moods.delete(mood); else state.moods.add(mood);
+      chip.classList.toggle("active");
+      state.visibleCount = PAGE_SIZE;
+      render();
+    });
+    moodRow.appendChild(chip);
+  }
+
+  const genreRow = document.getElementById("genreRow");
+  const genres = buildGenreList();
+  for (const genre of genres) {
+    const chip = document.createElement("button");
+    chip.className = "chip";
+    chip.textContent = genre;
+    chip.dataset.genre = genre;
+    chip.addEventListener("click", () => {
+      if (state.genres.has(genre)) state.genres.delete(genre); else state.genres.add(genre);
+      chip.classList.toggle("active");
+      state.visibleCount = PAGE_SIZE;
+      render();
+    });
+    genreRow.appendChild(chip);
+  }
+}
+
+function getFiltered() {
+  let list = MOVIES;
+  if (state.search.trim()) {
+    const q = state.search.trim().toLowerCase();
+    list = list.filter(m => m.t.toLowerCase().includes(q));
+  }
+  if (state.moods.size) {
+    list = list.filter(m => state.moods.has(m.m));
+  }
+  if (state.genres.size) {
+    list = list.filter(m => m.g.some(g => state.genres.has(g)));
+  }
+  if (state.onlyRated) {
+    list = list.filter(m => m.r !== null);
+  }
+
+  const sorted = list.slice();
+  if (state.sort === "rating_desc") {
+    sorted.sort((a, b) => (b.r ?? -1) - (a.r ?? -1));
+  } else if (state.sort === "year_desc") {
+    sorted.sort((a, b) => (b.y ?? 0) - (a.y ?? 0));
+  } else if (state.sort === "title_asc") {
+    sorted.sort((a, b) => a.t.localeCompare(b.t));
+  }
+  return sorted;
+}
+
+function cardHtml(m) {
+  const rClass = ratingClass(m.r);
+  const rText = m.r === null ? "N/D" : m.r.toFixed(1);
+  const votes = m.v ? `<div class="votes">${m.v.toLocaleString("it-IT")} voti</div>` : "";
+  const rtBadge = (m.rt !== null && m.rt !== undefined)
+    ? `<div class="rt-badge">🍅 ${m.rt}%</div>` : "";
+  const genreTags = m.g.slice(0, 3).map(g => `<span class="genre-tag">${g}</span>`).join("");
+  const year = m.y ? m.y : "";
+  const moodTitle = m.mo ? ` title="${m.mo.replace(/"/g, '&quot;')}"` : "";
+  return `
+    <div class="card">
+      <div class="card-top">
+        <div class="title-block">
+          <h3>${m.t}</h3>
+          <div class="year">${year}</div>
+        </div>
+        <div class="rating-block">
+          <div class="rating ${rClass}">${rText}${votes}</div>
+          ${rtBadge}
+        </div>
+      </div>
+      <span class="mood-badge ${moodClass(m.m)}"${moodTitle}>${MOOD_LABELS[m.m] || m.m}</span>
+      <div class="genre-tags">${genreTags}</div>
+    </div>
+  `;
+}
+
+function render() {
+  const filtered = getFiltered();
+  const grid = document.getElementById("grid");
+  const visible = filtered.slice(0, state.visibleCount);
+  grid.innerHTML = visible.map(cardHtml).join("");
+
+  document.getElementById("emptyState").style.display = filtered.length ? "none" : "block";
+  document.getElementById("resultCount").textContent =
+    filtered.length ? `${filtered.length} film trovati` : "";
+
+  const loadMoreWrap = document.getElementById("loadMoreWrap");
+  if (filtered.length > state.visibleCount) {
+    loadMoreWrap.style.display = "flex";
+    document.getElementById("loadMore").textContent =
+      `Mostra altri (${Math.min(PAGE_SIZE, filtered.length - state.visibleCount)})`;
+  } else {
+    loadMoreWrap.style.display = "none";
+  }
+}
+
+document.getElementById("search").addEventListener("input", (e) => {
+  state.search = e.target.value;
+  state.visibleCount = PAGE_SIZE;
+  render();
+});
+
+document.getElementById("onlyRated").addEventListener("change", (e) => {
+  state.onlyRated = e.target.checked;
+  state.visibleCount = PAGE_SIZE;
+  render();
+});
+
+document.getElementById("sort").addEventListener("change", (e) => {
+  state.sort = e.target.value;
+  render();
+});
+
+document.getElementById("loadMore").addEventListener("click", () => {
+  state.visibleCount += PAGE_SIZE;
+  render();
+});
+
+document.getElementById("footerNote").textContent =
+  `${MOVIES.length} film nel catalogo · voti IMDb reali dove disponibili`;
+
+renderChips();
+render();
+</script>
+</body>
+</html>
