@@ -1,24 +1,24 @@
 """
-Rigenera data/film_dashboard.csv e dashboard/index.html a partire da data/film.csv.
+Regenerates data/film_dashboard.csv and dashboard/index.html from data/film.csv.
 
-Cosa fa, in ordine:
-1. Scarica (o riusa se gia scaricati) i dataset pubblici e gratuiti di IMDb, che contengono
-   titolo/anno e voto medio per milioni di film. Vengono salvati in data/.imdb_cache/ e non
-   vanno modificati a mano.
-2. Legge data/film.csv (colonne: movieId, title, genres — title include l'anno tra parentesi,
-   es. "Toy Story (1995)"; genres e una lista separata da "|").
-3. Cerca ogni film nei dati IMDb per titolo+anno, per recuperare il voto medio reale.
-4. Assegna un "mood" (che tipo di serata e adatta a quel film) in base al genere, con una
-   regola fissa — non e un giudizio esatto, e un'euristica ragionevole.
-5. Scrive data/film_dashboard.csv (leggibile anche in Excel) e dashboard/index.html (la
-   dashboard vera e propria, un unico file HTML autonomo, senza bisogno di internet per
-   funzionare una volta generato).
+What it does, in order:
+1. Downloads (or reuses if already downloaded) IMDb's free public datasets, which contain
+   title/year and average rating for millions of movies. Saved in data/.imdb_cache/ and should
+   not be edited by hand.
+2. Reads data/film.csv (columns: movieId, title, genres — title includes the year in
+   parentheses, e.g. "Toy Story (1995)"; genres is a list separated by "|").
+3. Looks up each movie in the IMDb data by title+year, to recover its real average rating.
+4. Assigns a "mood" (what kind of movie night this is) based on genre, using a fixed rule —
+   not an exact judgment, a reasonable heuristic.
+5. Writes data/film_dashboard.csv (also readable in Excel) and dashboard/index.html (the actual
+   dashboard, a single self-contained HTML file that needs no internet connection to work once
+   generated).
 
-Uso:
+Usage:
     python scripts/build_dashboard.py
 
-Non serve rilanciarlo se non cambia data/film.csv: dashboard/index.html e gia pronto e
-funzionante cosi com'e.
+No need to rerun it unless data/film.csv changes: dashboard/index.html is already built and
+working as is.
 """
 
 import csv
@@ -40,15 +40,15 @@ IMDB_RATINGS_URL = "https://datasets.imdbws.com/title.ratings.tsv.gz"
 
 TITLE_YEAR_RE = re.compile(r"^(.*)\s\((\d{4})\)\s*$")
 
-MOOD_ORDER = ["Venerdi leggero", "Comfort movie", "Adrenalina", "Mente accesa",
-              "Da vedere in due", "Domenica impegnativa"]
+MOOD_ORDER = ["Friday Light", "Comfort Movie", "Adrenaline", "Mind On",
+              "Date Night", "Heavy Sunday"]
 
 
 def download_if_missing(url, dest):
     if dest.exists():
-        print(f"  (gia presente) {dest.name}")
+        print(f"  (already present) {dest.name}")
         return
-    print(f"  scarico {url} ...")
+    print(f"  downloading {url} ...")
     dest.parent.mkdir(parents=True, exist_ok=True)
     urllib.request.urlretrieve(url, dest)
 
@@ -67,28 +67,28 @@ def norm(s):
 def assign_mood(genres):
     g = set(genres)
     if g & {"Horror", "Thriller", "Crime", "War"}:
-        return "Adrenalina"
+        return "Adrenaline"
     if "Romance" in g:
-        return "Da vedere in due"
+        return "Date Night"
     if g & {"Documentary", "Film-Noir"}:
-        return "Domenica impegnativa"
+        return "Heavy Sunday"
     if "Drama" in g and not (g & {"Comedy", "Animation", "Children", "Musical"}):
-        return "Domenica impegnativa"
+        return "Heavy Sunday"
     if g & {"Mystery", "Sci-Fi"}:
-        return "Mente accesa"
+        return "Mind On"
     if g & {"Comedy", "Children", "Animation", "Musical"}:
-        return "Comfort movie"
-    return "Venerdi leggero"
+        return "Comfort Movie"
+    return "Friday Light"
 
 
 def main():
-    print("1. Dataset IMDb (scarico solo se mancanti)...")
+    print("1. IMDb datasets (downloading only if missing)...")
     basics_path = CACHE / "title.basics.tsv.gz"
     ratings_path = CACHE / "title.ratings.tsv.gz"
     download_if_missing(IMDB_BASICS_URL, basics_path)
     download_if_missing(IMDB_RATINGS_URL, ratings_path)
 
-    print("2. Leggo data/film.csv...")
+    print("2. Reading data/film.csv...")
     with open(DATA / "film.csv", newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
         our_movies = []
@@ -100,11 +100,11 @@ def main():
                 "year": year,
                 "genres": [g for g in row["genres"].split("|") if g and g != "(no genres listed)"],
             })
-    print(f"   {len(our_movies)} film letti.")
+    print(f"   {len(our_movies)} movies read.")
 
     wanted_keys = {(norm(m["name"]), m["year"]) for m in our_movies if m["year"] is not None}
 
-    print("3. Cerco i voti in title.basics.tsv.gz (puo richiedere un paio di minuti)...")
+    print("3. Looking up ratings in title.basics.tsv.gz (can take a couple of minutes)...")
     key_to_tconst = {}
     with gzip.open(basics_path, "rt", encoding="utf-8") as f:
         header = f.readline().rstrip("\n").split("\t")
@@ -134,7 +134,7 @@ def main():
             if tconst in needed_tconsts:
                 ratings[tconst] = (float(parts[idx["averageRating"]]), int(parts[idx["numVotes"]]))
 
-    print("4. Assegno voto e mood a ogni film...")
+    print("4. Assigning rating and mood to each movie...")
     movies = []
     matched = 0
     for m in our_movies:
@@ -155,21 +155,21 @@ def main():
             "rt": None,
             "mo": "",
         })
-    print(f"   Voto trovato per {matched} / {len(movies)} film.")
+    print(f"   Rating found for {matched} / {len(movies)} movies.")
 
-    print("5. Scrivo data/film_dashboard.csv...")
+    print("5. Writing data/film_dashboard.csv...")
     with open(DATA / "film_dashboard.csv", "w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
-        writer.writerow(["movieId", "title", "anno", "genres", "voto_imdb", "num_voti_imdb",
-                          "mood", "voto_rotten_tomatoes", "motivazione_mood"])
+        writer.writerow(["movieId", "title", "year", "genres", "imdb_rating", "imdb_votes",
+                          "mood", "rotten_tomatoes", "mood_reason"])
         for m in movies:
             writer.writerow([m["id"], m["t"], m["y"] or "", "|".join(m["g"]),
                               m["r"] or "", m["v"] or "", m["m"], "", ""])
 
-    print("6. Genero dashboard/index.html...")
+    print("6. Generating dashboard/index.html...")
     render_html(movies)
 
-    print("Fatto. Apri dashboard/index.html nel browser per vedere il risultato.")
+    print("Done. Open dashboard/index.html in a browser to see the result.")
 
 
 if __name__ == "__main__":

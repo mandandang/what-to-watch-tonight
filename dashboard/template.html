@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="it">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Cosa guardo stasera?</title>
+<title>What to Watch Tonight?</title>
 <style>
   :root {
     color-scheme: dark;
@@ -44,10 +44,42 @@
 
   h1 {
     font-size: clamp(1.4rem, 4vw, 2rem);
-    margin: 0 0 14px;
+    margin: 0;
     display: flex;
     align-items: center;
     gap: 10px;
+  }
+
+  .title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+
+  .lang-switch {
+    flex: none;
+    display: flex;
+    background: var(--chip-bg);
+    border-radius: 999px;
+    padding: 3px;
+    gap: 2px;
+  }
+
+  .lang-btn {
+    border: none;
+    background: transparent;
+    color: var(--text-dim);
+    font-size: 0.78rem;
+    font-weight: 600;
+    padding: 5px 10px;
+    border-radius: 999px;
+    cursor: pointer;
+  }
+  .lang-btn.active {
+    background: var(--accent);
+    color: var(--chip-active-text);
   }
 
   .search-wrap {
@@ -241,12 +273,12 @@
     border-radius: 999px;
     color: #1a1610;
   }
-  .mood-Adrenalina { background: #e2685f; color: #2a0d0a; }
-  .mood-Comfort-movie { background: #6bc98f; color: #0d2416; }
-  .mood-Mente-accesa { background: #7aa7e8; color: #0d1c33; }
-  .mood-Da-vedere-in-due { background: #e884c4; color: #300f27; }
-  .mood-Domenica-impegnativa { background: #a08ee0; color: #1e1533; }
-  .mood-Venerdi-leggero { background: #e8b34a; color: #2a1c05; }
+  .mood-Adrenaline { background: #e2685f; color: #2a0d0a; }
+  .mood-Comfort-Movie { background: #6bc98f; color: #0d2416; }
+  .mood-Mind-On { background: #7aa7e8; color: #0d1c33; }
+  .mood-Date-Night { background: #e884c4; color: #300f27; }
+  .mood-Heavy-Sunday { background: #a08ee0; color: #1e1533; }
+  .mood-Friday-Light { background: #e8b34a; color: #2a1c05; }
 
   .empty-state {
     text-align: center;
@@ -287,27 +319,33 @@
 <body>
 
 <header>
-  <h1>🎬 Cosa guardo stasera?</h1>
+  <div class="title-row">
+    <h1 id="pageTitle">🎬 What to Watch Tonight?</h1>
+    <div class="lang-switch" id="langSwitch">
+      <button class="lang-btn" data-lang="en">EN</button>
+      <button class="lang-btn" data-lang="it">IT</button>
+    </div>
+  </div>
   <div class="search-wrap">
     <span class="search-icon">🔎</span>
-    <input id="search" type="text" placeholder="Cerca un titolo...">
+    <input id="search" type="text" placeholder="Search a title...">
   </div>
   <div class="filters">
     <div class="filter-row" id="moodRow">
       <span class="filter-label">Mood</span>
     </div>
     <div class="filter-row" id="genreRow">
-      <span class="filter-label">Genere</span>
+      <span class="filter-label">Genre</span>
     </div>
   </div>
   <div class="toolbar">
     <span class="result-count" id="resultCount"></span>
     <div style="display:flex; align-items:center; gap:14px;">
-      <label class="toggle"><input type="checkbox" id="onlyRated"> Solo con voto</label>
+      <label class="toggle"><input type="checkbox" id="onlyRated"> Only rated</label>
       <select id="sort">
-        <option value="rating_desc">Voto (dal piu alto)</option>
-        <option value="year_desc">Anno (dal piu recente)</option>
-        <option value="title_asc">Titolo (A-Z)</option>
+        <option value="rating_desc">Rating (highest first)</option>
+        <option value="year_desc">Year (newest first)</option>
+        <option value="title_asc">Title (A-Z)</option>
       </select>
     </div>
   </div>
@@ -315,7 +353,7 @@
 
 <main>
   <div class="grid" id="grid"></div>
-  <div class="empty-state" id="emptyState" style="display:none;">Nessun film corrisponde ai filtri scelti. Prova ad allargarli.</div>
+  <div class="empty-state" id="emptyState" style="display:none;">No movies match the selected filters. Try widening them.</div>
   <div class="load-more-wrap" id="loadMoreWrap" style="display:none;">
     <button id="loadMore"></button>
   </div>
@@ -326,14 +364,62 @@
 <script>
 const MOVIES = /*__MOVIES_JSON__*/;
 
-const MOOD_ORDER = ["Venerdi leggero", "Comfort movie", "Adrenalina", "Mente accesa", "Da vedere in due", "Domenica impegnativa"];
+const MOOD_ORDER = ["Friday Light", "Comfort Movie", "Adrenaline", "Mind On", "Date Night", "Heavy Sunday"];
+
+// Mood keys are always stored/filtered in English (they match the data); only the label shown
+// to the viewer changes with the selected language.
 const MOOD_LABELS = {
-  "Venerdi leggero": "Venerdì leggero",
-  "Comfort movie": "Comfort movie",
-  "Adrenalina": "Adrenalina",
-  "Mente accesa": "Mente accesa",
-  "Da vedere in due": "Da vedere in due",
-  "Domenica impegnativa": "Domenica impegnativa",
+  en: {
+    "Friday Light": "Friday Light",
+    "Comfort Movie": "Comfort Movie",
+    "Adrenaline": "Adrenaline",
+    "Mind On": "Mind On",
+    "Date Night": "Date Night",
+    "Heavy Sunday": "Heavy Sunday",
+  },
+  it: {
+    "Friday Light": "Venerdì leggero",
+    "Comfort Movie": "Comfort movie",
+    "Adrenaline": "Adrenalina",
+    "Mind On": "Mente accesa",
+    "Date Night": "Da vedere in due",
+    "Heavy Sunday": "Domenica impegnativa",
+  },
+};
+
+const STRINGS = {
+  en: {
+    pageTitle: "🎬 What to Watch Tonight?",
+    searchPlaceholder: "Search a title...",
+    moodLabel: "Mood",
+    genreLabel: "Genre",
+    onlyRated: "Only rated",
+    sortRatingDesc: "Rating (highest first)",
+    sortYearDesc: "Year (newest first)",
+    sortTitleAsc: "Title (A-Z)",
+    emptyState: "No movies match the selected filters. Try widening them.",
+    resultCount: (n) => `${n} movies found`,
+    loadMore: (n) => `Show more (${n})`,
+    votes: "votes",
+    na: "N/A",
+    footer: (n) => `${n} movies in the catalog · real IMDb ratings where available`,
+  },
+  it: {
+    pageTitle: "🎬 Cosa guardare stasera?",
+    searchPlaceholder: "Cerca un titolo...",
+    moodLabel: "Mood",
+    genreLabel: "Genere",
+    onlyRated: "Solo con voto",
+    sortRatingDesc: "Voto (dal più alto)",
+    sortYearDesc: "Anno (dal più recente)",
+    sortTitleAsc: "Titolo (A-Z)",
+    emptyState: "Nessun film corrisponde ai filtri scelti. Prova ad allargarli.",
+    resultCount: (n) => `${n} film trovati`,
+    loadMore: (n) => `Mostra altri (${n})`,
+    votes: "voti",
+    na: "N/D",
+    footer: (n) => `${n} film nel catalogo · voti IMDb reali dove disponibili`,
+  },
 };
 
 const state = {
@@ -343,9 +429,17 @@ const state = {
   onlyRated: false,
   sort: "rating_desc",
   visibleCount: 60,
+  // Defaults to English; remembers the viewer's choice in this browser only.
+  lang: (() => {
+    try { return localStorage.getItem("lang") || "en"; } catch (e) { return "en"; }
+  })(),
 };
 
 const PAGE_SIZE = 60;
+
+function t() {
+  return STRINGS[state.lang];
+}
 
 function moodClass(mood) {
   return "mood-" + mood.replace(/ /g, "-");
@@ -364,12 +458,13 @@ function buildGenreList() {
   return Array.from(set).sort();
 }
 
-function renderChips() {
+function renderMoodChips() {
   const moodRow = document.getElementById("moodRow");
+  moodRow.querySelectorAll(".chip").forEach((el) => el.remove());
   for (const mood of MOOD_ORDER) {
     const chip = document.createElement("button");
-    chip.className = "chip";
-    chip.textContent = MOOD_LABELS[mood];
+    chip.className = "chip" + (state.moods.has(mood) ? " active" : "");
+    chip.textContent = MOOD_LABELS[state.lang][mood];
     chip.dataset.mood = mood;
     chip.addEventListener("click", () => {
       if (state.moods.has(mood)) state.moods.delete(mood); else state.moods.add(mood);
@@ -379,7 +474,9 @@ function renderChips() {
     });
     moodRow.appendChild(chip);
   }
+}
 
+function renderGenreChips() {
   const genreRow = document.getElementById("genreRow");
   const genres = buildGenreList();
   for (const genre of genres) {
@@ -395,6 +492,33 @@ function renderChips() {
     });
     genreRow.appendChild(chip);
   }
+}
+
+function applyStaticText() {
+  const s = t();
+  document.getElementById("pageTitle").textContent = s.pageTitle;
+  document.getElementById("search").placeholder = s.searchPlaceholder;
+  document.querySelector('#moodRow .filter-label').textContent = s.moodLabel;
+  document.querySelector('#genreRow .filter-label').textContent = s.genreLabel;
+  document.querySelector('label.toggle').lastChild.textContent = " " + s.onlyRated;
+  const sortSelect = document.getElementById("sort");
+  sortSelect.options[0].textContent = s.sortRatingDesc;
+  sortSelect.options[1].textContent = s.sortYearDesc;
+  sortSelect.options[2].textContent = s.sortTitleAsc;
+  document.getElementById("emptyState").textContent = s.emptyState;
+  document.documentElement.lang = state.lang;
+
+  document.querySelectorAll(".lang-btn").forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.lang === state.lang);
+  });
+}
+
+function setLanguage(lang) {
+  state.lang = lang;
+  try { localStorage.setItem("lang", lang); } catch (e) { /* ignore, e.g. private browsing */ }
+  applyStaticText();
+  renderMoodChips();
+  render();
 }
 
 function getFiltered() {
@@ -425,9 +549,11 @@ function getFiltered() {
 }
 
 function cardHtml(m) {
+  const s = t();
   const rClass = ratingClass(m.r);
-  const rText = m.r === null ? "N/D" : m.r.toFixed(1);
-  const votes = m.v ? `<div class="votes">${m.v.toLocaleString("it-IT")} voti</div>` : "";
+  const rText = m.r === null ? s.na : m.r.toFixed(1);
+  const localeTag = state.lang === "it" ? "it-IT" : "en-US";
+  const votes = m.v ? `<div class="votes">${m.v.toLocaleString(localeTag)} ${s.votes}</div>` : "";
   const rtBadge = (m.rt !== null && m.rt !== undefined)
     ? `<div class="rt-badge">🍅 ${m.rt}%</div>` : "";
   const genreTags = m.g.slice(0, 3).map(g => `<span class="genre-tag">${g}</span>`).join("");
@@ -445,13 +571,14 @@ function cardHtml(m) {
           ${rtBadge}
         </div>
       </div>
-      <span class="mood-badge ${moodClass(m.m)}"${moodTitle}>${MOOD_LABELS[m.m] || m.m}</span>
+      <span class="mood-badge ${moodClass(m.m)}"${moodTitle}>${MOOD_LABELS[state.lang][m.m] || m.m}</span>
       <div class="genre-tags">${genreTags}</div>
     </div>
   `;
 }
 
 function render() {
+  const s = t();
   const filtered = getFiltered();
   const grid = document.getElementById("grid");
   const visible = filtered.slice(0, state.visibleCount);
@@ -459,16 +586,18 @@ function render() {
 
   document.getElementById("emptyState").style.display = filtered.length ? "none" : "block";
   document.getElementById("resultCount").textContent =
-    filtered.length ? `${filtered.length} film trovati` : "";
+    filtered.length ? s.resultCount(filtered.length) : "";
 
   const loadMoreWrap = document.getElementById("loadMoreWrap");
   if (filtered.length > state.visibleCount) {
     loadMoreWrap.style.display = "flex";
     document.getElementById("loadMore").textContent =
-      `Mostra altri (${Math.min(PAGE_SIZE, filtered.length - state.visibleCount)})`;
+      s.loadMore(Math.min(PAGE_SIZE, filtered.length - state.visibleCount));
   } else {
     loadMoreWrap.style.display = "none";
   }
+
+  document.getElementById("footerNote").textContent = s.footer(MOVIES.length);
 }
 
 document.getElementById("search").addEventListener("input", (e) => {
@@ -493,10 +622,13 @@ document.getElementById("loadMore").addEventListener("click", () => {
   render();
 });
 
-document.getElementById("footerNote").textContent =
-  `${MOVIES.length} film nel catalogo · voti IMDb reali dove disponibili`;
+document.querySelectorAll(".lang-btn").forEach((btn) => {
+  btn.addEventListener("click", () => setLanguage(btn.dataset.lang));
+});
 
-renderChips();
+applyStaticText();
+renderMoodChips();
+renderGenreChips();
 render();
 </script>
 </body>

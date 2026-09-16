@@ -1,7 +1,7 @@
 """
-Funzioni condivise tra build_dashboard.py, render_dashboard.py e la skill aggiorna-cinema:
-leggere data/film_dashboard.csv e generare dashboard/index.html a partire da
-dashboard/template.html. Non e pensato per essere eseguito direttamente.
+Shared functions used by build_dashboard.py, render_dashboard.py and the update-cinema skill:
+reading data/film_dashboard.csv and generating dashboard/index.html from dashboard/template.html.
+Not meant to be run directly.
 """
 
 import csv
@@ -17,7 +17,7 @@ OUTPUT_HTML = DASHBOARD / "index.html"
 
 
 def load_dashboard_csv(csv_path=None):
-    """Legge data/film_dashboard.csv e lo trasforma nella lista di film che la dashboard si aspetta."""
+    """Reads data/film_dashboard.csv and turns it into the list of movies the dashboard expects."""
     csv_path = csv_path or DASHBOARD_CSV
     with open(csv_path, newline="", encoding="utf-8") as f:
         rows = list(csv.DictReader(f))
@@ -27,24 +27,24 @@ def load_dashboard_csv(csv_path=None):
         movies.append({
             "id": int(row["movieId"]),
             "t": row["title"],
-            "y": int(row["anno"]) if row["anno"] else None,
+            "y": int(row["year"]) if row["year"] else None,
             "g": [g for g in row["genres"].split("|") if g],
-            "r": float(row["voto_imdb"]) if row.get("voto_imdb") else None,
-            "v": int(row["num_voti_imdb"]) if row.get("num_voti_imdb") else None,
+            "r": float(row["imdb_rating"]) if row.get("imdb_rating") else None,
+            "v": int(row["imdb_votes"]) if row.get("imdb_votes") else None,
             "m": row["mood"],
-            "rt": int(row["voto_rotten_tomatoes"]) if row.get("voto_rotten_tomatoes") else None,
-            "mo": row.get("motivazione_mood") or "",
+            "rt": int(row["rotten_tomatoes"]) if row.get("rotten_tomatoes") else None,
+            "mo": row.get("mood_reason") or "",
         })
     return movies
 
 
 def render_html(movies=None, template_path=None, output_path=None):
-    """Inietta la lista di film (come JSON) nel template HTML e scrive dashboard/index.html.
+    """Injects the list of movies (as JSON) into the HTML template and writes dashboard/index.html.
 
-    Se `movies` non e passato, lo legge da data/film_dashboard.csv. Ogni film e un dizionario
-    con le chiavi: id, t (titolo), y (anno), g (lista generi), r (voto imdb o None),
-    v (numero voti imdb o None), m (mood), rt (voto rotten tomatoes o None), mo (motivazione
-    del mood o stringa vuota).
+    If `movies` isn't passed, it's read from data/film_dashboard.csv. Each movie is a dict with
+    these keys: id, t (title), y (year), g (genre list), r (imdb rating or None),
+    v (imdb vote count or None), m (mood), rt (rotten tomatoes score or None), mo (mood reason,
+    empty string if none).
     """
     movies = movies if movies is not None else load_dashboard_csv()
     template_path = template_path or TEMPLATE_HTML

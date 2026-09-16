@@ -1,10 +1,10 @@
 """
-Rigenera SOLO dashboard/index.html a partire dai dati gia presenti in data/film_dashboard.csv,
-senza scaricare o ricalcolare nulla (a differenza di build_dashboard.py). Usalo dopo aver
-aggiornato a mano (o tramite la skill aggiorna-cinema) alcune righe di data/film_dashboard.csv,
-per rispecchiare subito le modifiche nella dashboard.
+Regenerates ONLY dashboard/index.html from the data already in data/film_dashboard.csv, without
+downloading or recomputing anything (unlike build_dashboard.py). Use it after updating some rows
+of data/film_dashboard.csv by hand (or via the update-cinema skill), to immediately reflect the
+changes in the dashboard.
 
-Uso:
+Usage:
     python scripts/render_dashboard.py
 """
 
@@ -15,7 +15,7 @@ from dashboard_lib import render_html
 
 def main():
     output = render_html()
-    print(f"Fatto: {output} rigenerato con i dati aggiornati.")
+    print(f"Done: {output} regenerated with the updated data.")
 
 
 if __name__ == "__main__":

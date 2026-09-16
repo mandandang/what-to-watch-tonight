@@ -1,9 +1,9 @@
 """
-Trova i film di data/film_dashboard.csv che non hanno ancora un voto_imdb, e stampa i primi 20
-(nell'ordine in cui compaiono nel file) in un formato pronto da usare nei prompt dei tre agenti
-di arricchimento. Usato dalla skill aggiorna-cinema.
+Finds the movies in data/film_dashboard.csv that don't have an imdb_rating yet, and prints the
+first 20 (in the order they appear in the file) in a format ready to use in the three enrichment
+agents' prompts. Used by the update-cinema skill.
 
-Uso:
+Usage:
     python scripts/select_next20.py
 """
 
@@ -19,18 +19,18 @@ def select_next(n=20, csv_path=None):
     csv_path = csv_path or DASHBOARD_CSV
     with open(csv_path, newline="", encoding="utf-8") as f:
         rows = list(csv.DictReader(f))
-    missing = [r for r in rows if not r.get("voto_imdb")]
+    missing = [r for r in rows if not r.get("imdb_rating")]
     return missing[:n]
 
 
 def main():
     movies = select_next(20)
     if not movies:
-        print("Nessun film senza voto: sono gia tutti arricchiti.")
+        print("No movies without a rating: the catalog is already fully enriched.")
         return
-    print(f"{len(movies)} film selezionati (ancora senza voto):\n")
+    print(f"{len(movies)} movies selected (still without a rating):\n")
     for i, m in enumerate(movies, 1):
-        year = m["anno"] or "?"
+        year = m["year"] or "?"
         genres = m["genres"].replace("|", ", ")
         print(f"{i}. {m['title']} ({year}) - {genres}")
 
